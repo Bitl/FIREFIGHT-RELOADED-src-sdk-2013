@@ -137,6 +137,7 @@ $Project "Client (Episodic)"
 			$File	"$SRCDIR\game\shared\firefightreloaded\singleplayer_animstate.h"
 			$File 	"firefightreloaded\fr_rendertargets.cpp"
 			$File 	"firefightreloaded\fr_rendertargets.h"
+			$File 	"firefightreloaded\fx_cs_weaponfx.cpp"
 
 			$Folder	"GameUI"
 			{

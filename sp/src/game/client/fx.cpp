@@ -228,6 +228,9 @@ void FX_MuzzleEffect(
 		pParticle->m_flDieTime		= /*bOneFrame ? 0.0001f : */0.1f;
 
 		pParticle->m_vecVelocity.Init();
+		C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+		Vector velocity = pPlayer->GetLocalVelocity();
+		pParticle->m_vecVelocity += velocity;
 
 		if ( !pFlashColor )
 		{
@@ -350,6 +353,9 @@ void FX_MuzzleEffectAttached(
 		pParticle->m_flDieTime		= bOneFrame ? 0.0001f : 0.1f;
 
 		pParticle->m_vecVelocity.Init();
+		C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+		Vector velocity = pPlayer->GetLocalVelocity();
+		pParticle->m_vecVelocity += velocity;
 
 		if ( !pFlashColor )
 		{
@@ -840,6 +846,9 @@ void FX_GunshipMuzzleEffect( const Vector &origin, const QAngle &angles, float s
 	pParticle->m_flDieTime		= 0.15f;
 
 	pParticle->m_vecVelocity.Init();
+	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	Vector velocity = pPlayer->GetLocalVelocity();
+	pParticle->m_vecVelocity += velocity;
 
 	pParticle->m_uchStartSize	= random->RandomFloat( 40.0, 50.0 );
 	pParticle->m_uchEndSize		= pParticle->m_uchStartSize;
