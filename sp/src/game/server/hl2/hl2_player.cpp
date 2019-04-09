@@ -1026,122 +1026,139 @@ void CHL2_Player::PreThink(void)
 }
 
 
-void CHL2_Player::KickAttack(void)
+void CHL2_Player::InitKickAttack(void)
 {
+	if (IsDead()) return;
+
 	MDLCACHE_CRITICAL_SECTION();
-	if (!IsDead())
+
+	CBaseViewModel *vm = GetViewModel(VM_LEGS);
+
+	if (!vm) return;
+
+	int idealSequence = vm->SelectWeightedSequence(ACT_VM_PRIMARYATTACK);
+
+	if (idealSequence >= 0)
 	{
-		CBaseViewModel *vm = GetViewModel(VM_LEGS);
+		vm->SendViewModelMatchingSequence(idealSequence);
+		m_flNextKickAttack = gpGlobals->curtime + vm->SequenceDuration(idealSequence) - 0.5f;
+	}
+	QAngle recoil = QAngle(random->RandomFloat(1.0f, 2.0f), random->RandomFloat(-1.0f, 1.0f), 0);
+	this->ViewPunch(recoil);
 
-		if (vm)
+	m_bIsKicking = true;
+}
+
+bool CHL2_Player::KickObject(CBaseEntity *pProp)
+{
+	if (!pProp || pProp->IsNPC())
+	{
+		return false;
+	}
+	
+	IPhysicsObject *pPhysicsObject = pProp->VPhysicsGetObject();
+	if (pPhysicsObject == NULL) return true;
+	
+	Vector hitDirection;
+	EyeVectors(&hitDirection, NULL, NULL);
+	VectorNormalize(hitDirection);
+	
+	float flForceScale = /*info.GetBaseDamage()*/ 5 * ImpulseScale(250, 10);
+	Vector vecForce = hitDirection;
+	VectorNormalize(vecForce);
+	vecForce *= flForceScale;
+	
+#if 0
+	CTakeDamageInfo info(this, this, 5, DMG_CRUSH);
+	info.SetDamagePosition(hitDirection);
+	info.SetDamageForce(vecForce);
+#endif
+	
+	pPhysicsObject->SetVelocity(&vecForce, NULL);
+	
+	EmitSound("HL2Player.kick_wall");
+	
+	return true;
+}
+
+void CHL2_Player::DoKickAttack(void)
+{
+	CBaseEntity *pProp = GetPlayerHeldEntity(this);
+	if (pProp)
+	{
+		//drop entity
+		GetUseEntity()->Use(this, this, USE_OFF, 0);
+		KickObject(pProp);
+	}
+	pProp = PhysCannonGetHeldEntity(GetActiveWeapon());
+	if (pProp)
+	{
+		PhysCannonForceDrop(GetActiveWeapon(), NULL);
+		KickObject(pProp);
+	}
+
+	// Trace up or down based on where the enemy is...
+	// But only if we're basically facing that direction
+	Vector vecDirection;
+	int kick_maxrange = 120;
+	AngleVectors(QAngle(clamp(EyeAngles().x, 20, kick_maxrange), EyeAngles().y, EyeAngles().z), &vecDirection);
+
+	CBaseEntity *pEnemy = MyNPCPointer() ? MyNPCPointer()->GetEnemy() : NULL;
+	if (pEnemy)
+	{
+		Assert(false);
+		Vector vecDelta;
+		VectorSubtract(pEnemy->WorldSpaceCenter(), Weapon_ShootPosition(), vecDelta);
+		VectorNormalize(vecDelta);
+
+		Vector2D vecDelta2D = vecDelta.AsVector2D();
+		Vector2DNormalize(vecDelta2D);
+		if (DotProduct2D(vecDelta2D, vecDirection.AsVector2D()) > 0.8f)
 		{
-			int	idealSequence = vm->SelectWeightedSequence(ACT_VM_PRIMARYATTACK);
-
-			if (idealSequence >= 0)
-			{
-				vm->SendViewModelMatchingSequence(idealSequence);
-				m_flNextKickAttack = gpGlobals->curtime + vm->SequenceDuration(idealSequence) - 0.5f;
-			}
-			QAngle	recoil = QAngle(random->RandomFloat(1.0f, 2.0f), random->RandomFloat(-1.0f, 1.0f), 0);
-			this->ViewPunch(recoil);
-
-			// Trace up or down based on where the enemy is...
-			// But only if we're basically facing that direction
-			Vector vecDirection;
-			int kick_maxrange = 120;
-			AngleVectors(QAngle(clamp(EyeAngles().x, 20, kick_maxrange), EyeAngles().y, EyeAngles().z), &vecDirection);
-
-			CBaseEntity *pEnemy = MyNPCPointer() ? MyNPCPointer()->GetEnemy() : NULL;
-			if (pEnemy)
-			{
-				Vector vecDelta;
-				VectorSubtract(pEnemy->WorldSpaceCenter(), Weapon_ShootPosition(), vecDelta);
-				VectorNormalize(vecDelta);
-
-				Vector2D vecDelta2D = vecDelta.AsVector2D();
-				Vector2DNormalize(vecDelta2D);
-				if (DotProduct2D(vecDelta2D, vecDirection.AsVector2D()) > 0.8f)
-				{
-					vecDirection = vecDelta;
-				}
-			}
-
-			Vector vecEnd;
-			VectorMA(Weapon_ShootPosition(), 50, vecDirection, vecEnd);
-			trace_t tr;
-			UTIL_TraceHull(Weapon_ShootPosition(), vecEnd, Vector(-16, -16, -16), Vector(16, 16, 16), MASK_SHOT_HULL, this, COLLISION_GROUP_NONE, &tr);
-
-			// did I hit someone?
-			float KickDamageMult = sk_kick_damage.GetFloat() + (sk_kick_damage_mult.GetFloat() * ((fabs(GetAbsVelocity().x) + fabs(GetAbsVelocity().y) + fabs(GetAbsVelocity().z)) / sk_kick_damage_div.GetFloat()));
-			float KickThrowForceMult = sk_kick_throwforce.GetFloat() + (sk_kick_throwforce_mult.GetFloat() * ((fabs(GetAbsVelocity().x) + fabs(GetAbsVelocity().y) + fabs(GetAbsVelocity().z)) / sk_kick_throwforce_div.GetFloat()));
-
-			DevMsg("Kicking at %.2f of damage!\n", KickDamageMult);
-			DevMsg("Kicking at %.2f of force!\n", KickThrowForceMult);
-
-			if (tr.m_pEnt)
-			{
-				if (!(tr.m_pEnt))
-				{
-					//	return;
-				}
-				else
-				{
-					CBasePropDoor *pDoor = dynamic_cast<CBasePropDoor*>((CBaseEntity*)tr.m_pEnt);
-					if (pDoor)
-					{
-						if (pDoor->HasSpawnFlags(SF_BREAKABLE_BY_PLAYER))
-						{
-							AngularImpulse angVelocity(random->RandomFloat(0, 45), 18, random->RandomFloat(-45, 45));
-							pDoor->PlayBreakOpenSound();
-							pDoor->BreakDoor(Weapon_ShootPosition(), angVelocity);
-							return;
-						}
-						pDoor->PlayBreakFailSound();
-						pDoor->KickFail();
-						return;
-					}
-					CBaseEntity *pProp = this->CheckTraceHullAttack(Weapon_ShootPosition(), vecEnd, Vector(-16, -16, -16), Vector(16, 16, 16), 5, DMG_CRUSH, KickThrowForceMult, false);
-					if (pProp && !pProp->IsNPC())
-					{
-						IPhysicsObject *pPhysicsObject = pProp->VPhysicsGetObject();
-						if (pPhysicsObject == NULL)
-						{
-							return;
-						}
-						CTakeDamageInfo info(this, this, 5, DMG_CRUSH);
-						Vector hitDirection;
-						EyeVectors(&hitDirection, NULL, NULL);
-						VectorNormalize(hitDirection);
-						info.SetDamagePosition(hitDirection);
-						float flForceScale = info.GetBaseDamage() * ImpulseScale(250, 10);
-						Vector vecForce = hitDirection;
-						VectorNormalize(vecForce);
-						vecForce *= flForceScale;
-						info.SetDamageForce(vecForce);
-						pPhysicsObject->SetVelocity(&vecForce, NULL);
-						EmitSound("HL2Player.kick_wall");
-						return;
-					}
-					CBaseEntity *Victim = this->CheckTraceHullAttack(Weapon_ShootPosition(), vecEnd, Vector(-16, -16, -16), Vector(16, 16, 16), KickDamageMult, DMG_CRUSH, KickThrowForceMult, true);
-					if (Victim && Victim->IsNPC())
-					{
-						EmitSound("HL2Player.kick_body");
-						return;
-					}
-				}
-			}
-			UTIL_TraceLine(Weapon_ShootPosition(), vecEnd, MASK_SHOT_HULL, this, COLLISION_GROUP_NONE, &tr);//IF we hit anything else
-			if (tr.DidHit())
-			{
-				EmitSound("HL2Player.kick_wall");
-			}
-			else
-			{
-				EmitSound("HL2Player.kick_fire");
-			}
-
+			vecDirection = vecDelta;
 		}
 	}
+
+	Vector vecEnd;
+	VectorMA(Weapon_ShootPosition(), 50, vecDirection, vecEnd);
+	trace_t tr;
+	UTIL_TraceHull(Weapon_ShootPosition(), vecEnd, Vector(-16, -16, -16), Vector(16, 16, 16), MASK_SHOT_HULL, this, COLLISION_GROUP_NONE, &tr);
+
+	// did I hit someone?
+	float KickDamageMult = sk_kick_damage.GetFloat() + (sk_kick_damage_mult.GetFloat() * ((fabs(GetAbsVelocity().x) + fabs(GetAbsVelocity().y) + fabs(GetAbsVelocity().z)) / sk_kick_damage_div.GetFloat()));
+	float KickThrowForceMult = sk_kick_throwforce.GetFloat() + (sk_kick_throwforce_mult.GetFloat() * ((fabs(GetAbsVelocity().x) + fabs(GetAbsVelocity().y) + fabs(GetAbsVelocity().z)) / sk_kick_throwforce_div.GetFloat()));
+
+	DevMsg("Kicking at %.2f of damage!\n", KickDamageMult);
+	DevMsg("Kicking at %.2f of force!\n", KickThrowForceMult);
+
+	if (tr.m_pEnt)
+	{
+		CBasePropDoor *pDoor = dynamic_cast<CBasePropDoor*>((CBaseEntity*)tr.m_pEnt);
+		if (pDoor)
+		{
+			if (pDoor->HasSpawnFlags(SF_BREAKABLE_BY_PLAYER))
+			{
+				AngularImpulse angVelocity(random->RandomFloat(0, 45), 18, random->RandomFloat(-45, 45));
+				pDoor->PlayBreakOpenSound();
+				pDoor->BreakDoor(Weapon_ShootPosition(), angVelocity);
+				return;
+			}
+			pDoor->PlayBreakFailSound();
+			pDoor->KickFail();
+			return;
+		}
+		pProp = this->CheckTraceHullAttack(Weapon_ShootPosition(), vecEnd, Vector(-16, -16, -16), Vector(16, 16, 16), 5, DMG_CRUSH, KickThrowForceMult, false);
+		if (KickObject(pProp)) return;
+		CBaseEntity *Victim = this->CheckTraceHullAttack(Weapon_ShootPosition(), vecEnd, Vector(-16, -16, -16), Vector(16, 16, 16), KickDamageMult, DMG_CRUSH, KickThrowForceMult, true);
+		if (Victim && Victim->IsNPC())
+		{
+			EmitSound("HL2Player.kick_body");
+			return;
+		}
+	}
+	
+	UTIL_TraceLine(Weapon_ShootPosition(), vecEnd, MASK_SHOT_HULL, this, COLLISION_GROUP_NONE, &tr);//IF we hit anything else
+	EmitSound(tr.DidHit() ? "HL2Player.kick_wall" : "HL2Player.kick_fire");
 }
 
 void CHL2_Player::FlyJetpack(void)
@@ -1189,10 +1206,41 @@ void CHL2_Player::PostThink( void )
 
 	if (!IsDead())
 	{
-		if (m_afButtonReleased & IN_KICK && m_flNextKickAttack < gpGlobals->curtime /* && m_flNextKickAttack < gpGlobals->curtime  && !m_bIsKicking*/)
+		bool shouldKick = false;
+		bool allowKick = false;
+		if ( m_flNextKickAttack < gpGlobals->curtime )
 		{
-			KickAttack();
-			m_bIsKicking = true;
+			allowKick = true;
+			shouldKick = m_bIsKicking;
+		}
+		else if ( m_flNextKickAttack - 0.5f < gpGlobals->curtime )
+		{
+			shouldKick = m_bIsKicking;
+		}
+		if ( shouldKick )
+		{
+			DoKickAttack();
+			m_bIsKicking = false;
+		}
+		if ( allowKick )
+		{
+			if ( m_afButtonReleased & IN_KICK )
+			{
+				InitKickAttack();
+			}
+			else
+			{
+				// stop kicking animation
+				CBaseViewModel *vm = GetViewModel(VM_LEGS);
+				if (vm && vm->GetSequence() != ACT_VM_IDLE)
+				{
+					int	idealSequence = vm->SelectWeightedSequence(ACT_VM_IDLE);
+					if (idealSequence >= 0)
+					{
+						vm->SendViewModelMatchingSequence(idealSequence);
+					}
+				}
+			}
 		}
 
 		if (m_nButtons & IN_JETPACK)
@@ -1216,25 +1264,6 @@ void CHL2_Player::PostThink( void )
 		else if (m_afButtonReleased & IN_IRONSIGHT)
 		{
 			pWeapon->DisableIronsights();
-		}
-	}
-
-	if (!IsDead())
-	{
-		if (m_flNextKickAttack < gpGlobals->curtime)
-		{
-			m_bIsKicking = false;
-			CBaseViewModel *vm = GetViewModel(VM_LEGS);
-
-			if (vm)
-			{
-				int	idealSequence = vm->SelectWeightedSequence(ACT_VM_IDLE);
-
-				if (idealSequence >= 0)
-				{
-					vm->SendViewModelMatchingSequence(idealSequence);
-				}
-			}
 		}
 	}
 

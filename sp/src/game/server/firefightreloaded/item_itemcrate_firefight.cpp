@@ -266,7 +266,7 @@ void CItem_ItemCrateFirefight::InputKill( inputdata_t &data )
 //-----------------------------------------------------------------------------
 int CItem_ItemCrateFirefight::OnTakeDamage( const CTakeDamageInfo &info )
 {
-	if ( info.GetDamageType() & DMG_AIRBOAT )
+	if ( info.GetDamageType() & DMG_AIRBOAT || info.GetAttacker()->IsPlayer() && info.GetDamageType() & (DMG_CRUSH | DMG_SLASH | DMG_CLUB) )
 	{
 		CTakeDamageInfo dmgInfo = info;
 		dmgInfo.ScaleDamage( 10.0 );
