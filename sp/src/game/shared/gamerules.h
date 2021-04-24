@@ -264,8 +264,16 @@ public:
 	virtual bool FAllowFlashlight( void ) = 0;// Are players allowed to switch on their flashlight?
 	virtual bool FShouldSwitchWeapon( CBasePlayer *pPlayer, CBaseCombatWeapon *pWeapon ) = 0;// should the player switch to this weapon?
 
+	virtual void SetGamemodeRandom(int x, int y, bool localServer = false);
+	virtual void SetGamemode(int name, bool localServer = false);
+	virtual int GetGamemode();
+	virtual const char* GetGamemodeName(bool localServer = false);
+	virtual const char* GetGamemodeName_ServerBrowser(bool localServer = false);
+	bool bHasRandomized;
+	int iRandomGamemode;
+
 	int iHeadshotCount;
-	virtual int GetHeadshotCount();
+	virtual int GetHeadshotCount() {return iHeadshotCount;}
 
 // Functions to verify the single/multiplayer status of a game
 	virtual bool IsDeathmatch( void ) = 0;//is this a deathmatch game?
@@ -450,6 +458,7 @@ extern ConVar g_fr_classic;
 extern ConVar g_fr_headshotgore;
 extern ConVar g_fr_economy;
 extern ConVar g_fr_npclimit;
+extern ConVar g_fr_spawneroldfunctionality;
 
 //-----------------------------------------------------------------------------
 // Gets us at the game rules

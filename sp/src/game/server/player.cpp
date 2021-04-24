@@ -8790,6 +8790,7 @@ bool CBasePlayer::ClientCommand( const CCommand &args )
 	else if (stricmp(cmd, "givemapadditems") == 0)
 	{
 		GiveNamedItem("weapon_positiongrabber");
+		g_pGameRules->SetGamemode(FIREFIGHT_PRIMARY_DISABLED);
 		return true;
 	}
 	else if (stricmp(cmd, "ironsightedit") == 0)

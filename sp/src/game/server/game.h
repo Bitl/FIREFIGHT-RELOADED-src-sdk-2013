@@ -18,6 +18,7 @@ extern ConVar	displaysoundlist;
 extern ConVar	mapcyclefile;
 extern ConVar	servercfgfile;
 extern ConVar	lservercfgfile;
+extern ConVar	defaultcfgfile;
 extern ConVar	combinefirefightcfgfile;
 extern ConVar	xeninvasioncfgfile;
 extern ConVar	antlionassaultcfgfile;

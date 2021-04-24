@@ -28,6 +28,13 @@ ConVar	displaysoundlist( "displaysoundlist","0" );
 ConVar  mapcyclefile( "mapcyclefile", "mapcycle.txt", FCVAR_NONE, "Name of the .txt file used to cycle the maps on multiplayer servers ", MapCycleFileChangedCallback );
 ConVar  servercfgfile( "servercfgfile","server.cfg" );
 ConVar  lservercfgfile( "lservercfgfile","listenserver.cfg" );
+ConVar  defaultcfgfile("defaultcfgfile", "gamemode_default.cfg");
+ConVar  combinefirefightcfgfile("combinefirefightcfgfile", "gamemode_combinefirefight.cfg");
+ConVar  xeninvasioncfgfile("xeninvasioncfgfile", "gamemode_xeninvasion.cfg");
+ConVar  antlionassaultcfgfile("antlionassaultcfgfile", "gamemode_antlionassault.cfg");
+ConVar  zombiesurvivalcfgfile("zombiesurvivalcfgfile", "gamemode_zombiesurvival.cfg");
+ConVar  firefightrumblecfgfile("firefightrumblecfgfile", "gamemode_firefightrumble.cfg");
+ConVar  resistanceretributioncfgfile("resistanceretributioncfgfile", "gamemode_resistanceretribution.cfg");
 
 // multiplayer server rules
 ConVar	teamplay( "mp_teamplay","0", FCVAR_NOTIFY );

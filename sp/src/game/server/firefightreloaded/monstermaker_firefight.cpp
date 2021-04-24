@@ -88,6 +88,79 @@ const char *g_charNPCSRare[] =
 	"npc_player"
 };
 
+const char* g_charNPCSCombineFirefightCommon[] =
+{
+	"npc_metropolice",
+	"npc_combine_s",
+	"npc_combine_e",
+	"npc_combine_p",
+	"npc_combine_shot",
+	"npc_elitepolice"
+};
+
+const char* g_charNPCSCombineFirefightRare[] =
+{
+	"npc_combine_ace",
+	"npc_hunter",
+	"npc_assassin",
+	"npc_cremator",
+	"npc_combineguard",
+	"npc_ministrider",
+	"npc_rollermine",
+	"npc_cscanner",
+	//temp until we actually set up the wave system.
+	"npc_player"
+};
+
+//why.
+const char* g_charNPCSAntlionAssaultCommon[] =
+{
+	"npc_antlion"
+};
+
+const char* g_charNPCSAntlionAssaultRare[] =
+{
+	"npc_antlionworker",
+	"npc_antlionguard",
+	"npc_antlionguardian",
+	//temp until we actually set up the wave system.
+	"npc_player"
+};
+
+const char* g_charNPCSZombieSurvivalCommon[] =
+{
+	"npc_zombie",
+	"npc_zombie_torso",
+	"npc_fastzombie",
+	"npc_fastzombie_torso"
+};
+
+const char* g_charNPCSZombieSurvivalRare[] =
+{
+	"npc_poisonzombie",
+	"npc_zombine",
+	//temp until we actually set up the wave system.
+	"npc_player"
+};
+
+const char* g_charNPCSXenInvasionCommon[] =
+{
+	"npc_houndeye",
+	"npc_bullsquid",
+	"npc_agrunt",
+	"npc_acontroller"
+};
+
+const char* g_charNPCSXenInvasionRare[] =
+{
+	"npc_headcrab_fast",
+	"npc_headcrab_poison",
+	"npc_vortigaunt",
+	"npc_headcrab",
+	//temp until we actually set up the wave system.
+	"npc_player"
+};
+
 static void DispatchActivate( CBaseEntity *pEntity )
 {
 	bool bAsyncAnims = mdlcache->SetAsyncLoad( MDLCACHE_ANIMBLOCK, false );
@@ -233,7 +306,21 @@ void CNPCMakerFirefight::Precache(void)
 //-----------------------------------------------------------------------------
 void CNPCMakerFirefight::MakerThink(void)
 {
-	SetNextThink(gpGlobals->curtime + m_flSpawnFrequency);
+	if (g_fr_spawneroldfunctionality.GetBool())
+	{
+		if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_ANTLIONASSAULT)
+		{
+			SetNextThink(gpGlobals->curtime + (m_flSpawnFrequency + 15));
+		}
+		else
+		{
+			SetNextThink(gpGlobals->curtime + m_flSpawnFrequency);
+		}
+	}
+	else
+	{
+		SetNextThink(gpGlobals->curtime + m_flSpawnFrequency);
+	}
 
 	if (sk_spawnrareenemies.GetBool())
 	{
@@ -446,6 +533,44 @@ void CNPCMakerFirefight::DeathNotice(CBaseEntity *pVictim)
 	}
 }
 
+const char** CNPCMakerFirefight::GetListForRareNPCs(void)
+{
+	switch (g_pGameRules->GetGamemode())
+	{
+		case FIREFIGHT_PRIMARY_COMBINEFIREFIGHT:
+			return g_charNPCSCombineFirefightRare;
+		case FIREFIGHT_PRIMARY_XENINVASION:
+			return g_charNPCSXenInvasionRare;
+		case FIREFIGHT_PRIMARY_ANTLIONASSAULT:
+			return g_charNPCSAntlionAssaultRare;
+		case FIREFIGHT_PRIMARY_ZOMBIESURVIVAL:
+			return g_charNPCSZombieSurvivalRare;
+		case FIREFIGHT_PRIMARY_FIREFIGHTRUMBLE:
+		case FIREFIGHT_PRIMARY_DEFAULT:
+		default:
+			return g_charNPCSRare;
+	}
+}
+
+const char** CNPCMakerFirefight::GetListForCommonNPCs(void)
+{
+	switch (g_pGameRules->GetGamemode())
+	{
+		case FIREFIGHT_PRIMARY_COMBINEFIREFIGHT:
+			return g_charNPCSCombineFirefightCommon;
+		case FIREFIGHT_PRIMARY_XENINVASION:
+			return g_charNPCSXenInvasionCommon;
+		case FIREFIGHT_PRIMARY_ANTLIONASSAULT:
+			return g_charNPCSAntlionAssaultCommon;
+		case FIREFIGHT_PRIMARY_ZOMBIESURVIVAL:
+			return g_charNPCSZombieSurvivalCommon;
+		case FIREFIGHT_PRIMARY_FIREFIGHTRUMBLE:
+		case FIREFIGHT_PRIMARY_DEFAULT:
+		default:
+			return g_charNPCSCommon;
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Creates the NPC.
 //-----------------------------------------------------------------------------
@@ -453,179 +578,135 @@ void CNPCMakerFirefight::MakeNPC(bool rareNPC)
 {
 	if (!CanMakeNPC())
 		return;
+
+	const char* pRandomName = "npc_player";
 	
 	if (rareNPC)
 	{
-		int nNPCs = ARRAYSIZE(g_charNPCSRare);
-		int randomChoice = rand() % nNPCs;
-		const char* pRandomName = g_charNPCSRare[randomChoice];
-
-		CAI_BaseNPC* pent = (CAI_BaseNPC*)CreateEntityByName(pRandomName);
-
-		if (!pent)
-		{
-			Warning("npc_maker_firefight: Entity classname does not exist in database.\n");
-			return;
-		}
-
-		// ------------------------------------------------
-		//  Intialize spawned NPC's relationships
-		// ------------------------------------------------
-		pent->SetRelationshipString(m_RelationshipString);
-
-		m_OnSpawnRareNPC.Set(pent, pent, this);
-
-		pent->SetAbsOrigin(GetAbsOrigin());
-
-		// Strip pitch and roll from the spawner's angles. Pass only yaw to the spawned NPC.
-		QAngle angles = GetAbsAngles();
-		angles.x = 0.0;
-		angles.z = 0.0;
-		pent->SetAbsAngles(angles);
-
-		pent->AddSpawnFlags(SF_NPC_FALL_TO_GROUND);
-
-		if (m_spawnflags & SF_NPCMAKER_FADE)
-		{
-			pent->AddSpawnFlags(SF_NPC_FADE_CORPSE);
-		}
-
-		if (Q_stristr(pRandomName, "npc_combine_ace"))
-		{
-			pent->m_spawnEquipment = MAKE_STRING("weapon_smg1");
-		}
-		else if (Q_stristr(pRandomName, "npc_player"))
-		{
-			//alert all players.
-			for (int i = 1; i <= gpGlobals->maxClients; i++)
-			{
-				CBasePlayer* pPlayer = UTIL_PlayerByIndex(i);
-				if (pPlayer)
-				{
-					CFmtStr hint;
-					hint.sprintf("#Valve_Hud_AllySpawned");
-					pPlayer->ShowLevelMessage(hint.Access());
-				}
-			}
-		}
-
-		pent->m_isRareEntity = true;
-		pent->SetSquadName(m_SquadName);
-		pent->SetHintGroup(m_strHintGroup);
-
-		ChildPreSpawn(pent);
-
-		DispatchSpawn(pent);
-		pent->SetOwnerEntity(this);
-		DispatchActivate(pent);
-
-		if (m_ChildTargetName != NULL_STRING)
-		{
-			// if I have a netname (overloaded), give the child NPC that name as a targetname
-			pent->SetName(m_ChildTargetName);
-		}
-
-		ChildPostSpawn(pent);
-		//rare entities have their own value we must consider.
-		m_nLiveRareNPCs++;
+		const char** entList = GetListForRareNPCs();
+		int randomChoice = rand() % sizeof(entList);
+		pRandomName = entList[randomChoice];
 	}
 	else
 	{
-		int nNPCs = ARRAYSIZE(g_charNPCSCommon);
-		int randomChoice = rand() % nNPCs;
-		const char* pRandomName = g_charNPCSCommon[randomChoice];
-
-		CAI_BaseNPC* pent = (CAI_BaseNPC*)CreateEntityByName(pRandomName);
-
-		if (!pent)
-		{
-			Warning("npc_maker_firefight: Entity classname does not exist in database.\n");
-			return;
-		}
-
-		// ------------------------------------------------
-		//  Intialize spawned NPC's relationships
-		// ------------------------------------------------
-		pent->SetRelationshipString(m_RelationshipString);
-
-		m_OnSpawnNPC.Set(pent, pent, this);
-
-		pent->SetAbsOrigin(GetAbsOrigin());
-
-		// Strip pitch and roll from the spawner's angles. Pass only yaw to the spawned NPC.
-		QAngle angles = GetAbsAngles();
-		angles.x = 0.0;
-		angles.z = 0.0;
-		pent->SetAbsAngles(angles);
-
-		pent->AddSpawnFlags(SF_NPC_FALL_TO_GROUND);
-
-		if (m_spawnflags & SF_NPCMAKER_FADE)
-		{
-			pent->AddSpawnFlags(SF_NPC_FADE_CORPSE);
-		}
-
-		if (Q_stristr(pRandomName, "npc_metropolice"))
-		{
-			int nWeaponsPolice = ARRAYSIZE(g_MetropoliceWeapons);
-			int randomChoicePolice = rand() % nWeaponsPolice;
-			const char* pRandomNamePolice = g_MetropoliceWeapons[randomChoicePolice];
-			pent->m_spawnEquipment = MAKE_STRING(pRandomNamePolice);
-			pent->AddSpawnFlags(SF_METROPOLICE_ALLOWED_TO_RESPOND);
-			pent->AddSpawnFlags(SF_METROPOLICE_MID_RANGE_ATTACK);
-		}
-		else if (Q_stristr(pRandomName, "npc_elitepolice"))
-		{
-			int nWeaponsElitePolice = ARRAYSIZE(g_EliteMetropoliceWeapons);
-			int randomChoiceElitePolice = rand() % nWeaponsElitePolice;
-			const char* pRandomNameElitePolice = g_EliteMetropoliceWeapons[randomChoiceElitePolice];
-			pent->m_spawnEquipment = MAKE_STRING(pRandomNameElitePolice);
-		}
-		else if (Q_stristr(pRandomName, "npc_combine_shot"))
-		{
-			pent->m_spawnEquipment = MAKE_STRING("weapon_shotgun");
-		}
-		else if (Q_stristr(pRandomName, "npc_combine_s"))
-		{
-			int nWeaponsSoldier = ARRAYSIZE(g_CombineSoldierWeapons);
-			int randomChoiceSoldier = rand() % nWeaponsSoldier;
-			const char* pRandomNameSoldier = g_CombineSoldierWeapons[randomChoiceSoldier];
-			pent->m_spawnEquipment = MAKE_STRING(pRandomNameSoldier);
-		}
-		else if (Q_stristr(pRandomName, "npc_combine_e"))
-		{
-			int nWeaponsSoldier = ARRAYSIZE(g_CombineSoldierWeapons);
-			int randomChoiceSoldier = rand() % nWeaponsSoldier;
-			const char* pRandomNameSoldier = g_CombineSoldierWeapons[randomChoiceSoldier];
-			pent->m_spawnEquipment = MAKE_STRING(pRandomNameSoldier);
-		}
-		else if (Q_stristr(pRandomName, "npc_combine_p"))
-		{
-			int nWeaponsSoldier = ARRAYSIZE(g_CombineSoldierWeapons);
-			int randomChoiceSoldier = rand() % nWeaponsSoldier;
-			const char* pRandomNameSoldier = g_CombineSoldierWeapons[randomChoiceSoldier];
-			pent->m_spawnEquipment = MAKE_STRING(pRandomNameSoldier);
-		}
-
-		pent->m_isRareEntity = false;
-		pent->SetSquadName(m_SquadName);
-		pent->SetHintGroup(m_strHintGroup);
-
-		ChildPreSpawn(pent);
-
-		DispatchSpawn(pent);
-		pent->SetOwnerEntity(this);
-		DispatchActivate(pent);
-
-		if (m_ChildTargetName != NULL_STRING)
-		{
-			// if I have a netname (overloaded), give the child NPC that name as a targetname
-			pent->SetName(m_ChildTargetName);
-		}
-
-		ChildPostSpawn(pent);
+		const char** entList = GetListForCommonNPCs();
+		int randomChoice = rand() % sizeof(entList);
+		pRandomName = entList[randomChoice];
 	}
 
+	CAI_BaseNPC* pent = (CAI_BaseNPC*)CreateEntityByName(pRandomName);
+
+	if (!pent)
+	{
+		Warning("npc_maker_firefight: Entity classname does not exist in database.\n");
+		return;
+	}
+
+	// ------------------------------------------------
+	//  Intialize spawned NPC's relationships
+	// ------------------------------------------------
+	pent->SetRelationshipString(m_RelationshipString);
+
+	m_OnSpawnNPC.Set(pent, pent, this);
+
+	pent->SetAbsOrigin(GetAbsOrigin());
+
+	// Strip pitch and roll from the spawner's angles. Pass only yaw to the spawned NPC.
+	QAngle angles = GetAbsAngles();
+	angles.x = 0.0;
+	angles.z = 0.0;
+	pent->SetAbsAngles(angles);
+
+	pent->AddSpawnFlags(SF_NPC_FALL_TO_GROUND);
+
+	if (m_spawnflags & SF_NPCMAKER_FADE)
+	{
+		pent->AddSpawnFlags(SF_NPC_FADE_CORPSE);
+	}
+
+	if (Q_stristr(pRandomName, "npc_metropolice"))
+	{
+		int nWeaponsPolice = ARRAYSIZE(g_MetropoliceWeapons);
+		int randomChoicePolice = rand() % nWeaponsPolice;
+		const char* pRandomNamePolice = g_MetropoliceWeapons[randomChoicePolice];
+		pent->m_spawnEquipment = MAKE_STRING(pRandomNamePolice);
+		pent->AddSpawnFlags(SF_METROPOLICE_ALLOWED_TO_RESPOND);
+		pent->AddSpawnFlags(SF_METROPOLICE_MID_RANGE_ATTACK);
+	}
+	else if (Q_stristr(pRandomName, "npc_elitepolice"))
+	{
+		int nWeaponsElitePolice = ARRAYSIZE(g_EliteMetropoliceWeapons);
+		int randomChoiceElitePolice = rand() % nWeaponsElitePolice;
+		const char* pRandomNameElitePolice = g_EliteMetropoliceWeapons[randomChoiceElitePolice];
+		pent->m_spawnEquipment = MAKE_STRING(pRandomNameElitePolice);
+	}
+	else if (Q_stristr(pRandomName, "npc_combine_shot"))
+	{
+		pent->m_spawnEquipment = MAKE_STRING("weapon_shotgun");
+	}
+	else if (Q_stristr(pRandomName, "npc_combine_s"))
+	{
+		int nWeaponsSoldier = ARRAYSIZE(g_CombineSoldierWeapons);
+		int randomChoiceSoldier = rand() % nWeaponsSoldier;
+		const char* pRandomNameSoldier = g_CombineSoldierWeapons[randomChoiceSoldier];
+		pent->m_spawnEquipment = MAKE_STRING(pRandomNameSoldier);
+	}
+	else if (Q_stristr(pRandomName, "npc_combine_e"))
+	{
+		int nWeaponsSoldier = ARRAYSIZE(g_CombineSoldierWeapons);
+		int randomChoiceSoldier = rand() % nWeaponsSoldier;
+		const char* pRandomNameSoldier = g_CombineSoldierWeapons[randomChoiceSoldier];
+		pent->m_spawnEquipment = MAKE_STRING(pRandomNameSoldier);
+	}
+	else if (Q_stristr(pRandomName, "npc_combine_p"))
+	{
+		int nWeaponsSoldier = ARRAYSIZE(g_CombineSoldierWeapons);
+		int randomChoiceSoldier = rand() % nWeaponsSoldier;
+		const char* pRandomNameSoldier = g_CombineSoldierWeapons[randomChoiceSoldier];
+		pent->m_spawnEquipment = MAKE_STRING(pRandomNameSoldier);
+	}
+	else if (Q_stristr(pRandomName, "npc_combine_ace"))
+	{
+		pent->m_spawnEquipment = MAKE_STRING("weapon_smg1");
+	}
+	else if (Q_stristr(pRandomName, "npc_player"))
+	{
+		//alert all players.
+		for (int i = 1; i <= gpGlobals->maxClients; i++)
+		{
+			CBasePlayer* pPlayer = UTIL_PlayerByIndex(i);
+			if (pPlayer)
+			{
+				CFmtStr hint;
+				hint.sprintf("#Valve_Hud_AllySpawned");
+				pPlayer->ShowLevelMessage(hint.Access());
+			}
+		}
+	}
+
+	pent->m_isRareEntity = rareNPC;
+	pent->SetSquadName(m_SquadName);
+	pent->SetHintGroup(m_strHintGroup);
+
+	ChildPreSpawn(pent);
+
+	DispatchSpawn(pent);
+	pent->SetOwnerEntity(this);
+	DispatchActivate(pent);
+
+	if (m_ChildTargetName != NULL_STRING)
+	{
+		// if I have a netname (overloaded), give the child NPC that name as a targetname
+		pent->SetName(m_ChildTargetName);
+	}
+
+	ChildPostSpawn(pent);
+
+	if (rareNPC)
+	{
+		//rare entities have their own value we must consider.
+		m_nLiveRareNPCs++;
+	}
 	m_nLiveChildren++;// count this NPC
 	g_iNPCLimit++;
 }
