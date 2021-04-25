@@ -211,8 +211,10 @@ void VGui_CreateGlobalPanels( void )
 	loadingdisc->Create( gameToolParent );
 	messagechars->Create( gameToolParent );
 
+#ifndef _DEBUG
 	MainMenu->Create(NULL);		
 	OverrideMainMenu();
+#endif
 
 	// Debugging or related tool
 	fps->Create( toolParent );

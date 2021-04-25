@@ -67,6 +67,9 @@ const char *CSceneTokenProcessor::CurrentToken( void )
 //-----------------------------------------------------------------------------
 bool CSceneTokenProcessor::GetToken( bool crossline )
 {
+	if (!m_pBuffer || !m_szToken || !TokenAvailable())
+		return false;
+
 	// NOTE: crossline is ignored here, may need to implement if needed
 	m_pBuffer = engine->ParseFile( m_pBuffer, m_szToken, sizeof( m_szToken ) );
 	if ( m_szToken[0] )

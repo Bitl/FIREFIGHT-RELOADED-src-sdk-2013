@@ -533,44 +533,6 @@ void CNPCMakerFirefight::DeathNotice(CBaseEntity *pVictim)
 	}
 }
 
-const char** CNPCMakerFirefight::GetListForRareNPCs(void)
-{
-	switch (g_pGameRules->GetGamemode())
-	{
-		case FIREFIGHT_PRIMARY_COMBINEFIREFIGHT:
-			return g_charNPCSCombineFirefightRare;
-		case FIREFIGHT_PRIMARY_XENINVASION:
-			return g_charNPCSXenInvasionRare;
-		case FIREFIGHT_PRIMARY_ANTLIONASSAULT:
-			return g_charNPCSAntlionAssaultRare;
-		case FIREFIGHT_PRIMARY_ZOMBIESURVIVAL:
-			return g_charNPCSZombieSurvivalRare;
-		case FIREFIGHT_PRIMARY_FIREFIGHTRUMBLE:
-		case FIREFIGHT_PRIMARY_DEFAULT:
-		default:
-			return g_charNPCSRare;
-	}
-}
-
-const char** CNPCMakerFirefight::GetListForCommonNPCs(void)
-{
-	switch (g_pGameRules->GetGamemode())
-	{
-		case FIREFIGHT_PRIMARY_COMBINEFIREFIGHT:
-			return g_charNPCSCombineFirefightCommon;
-		case FIREFIGHT_PRIMARY_XENINVASION:
-			return g_charNPCSXenInvasionCommon;
-		case FIREFIGHT_PRIMARY_ANTLIONASSAULT:
-			return g_charNPCSAntlionAssaultCommon;
-		case FIREFIGHT_PRIMARY_ZOMBIESURVIVAL:
-			return g_charNPCSZombieSurvivalCommon;
-		case FIREFIGHT_PRIMARY_FIREFIGHTRUMBLE:
-		case FIREFIGHT_PRIMARY_DEFAULT:
-		default:
-			return g_charNPCSCommon;
-	}
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Creates the NPC.
 //-----------------------------------------------------------------------------
@@ -583,15 +545,75 @@ void CNPCMakerFirefight::MakeNPC(bool rareNPC)
 	
 	if (rareNPC)
 	{
-		const char** entList = GetListForRareNPCs();
-		int randomChoice = rand() % sizeof(entList);
-		pRandomName = entList[randomChoice];
+		if (g_fr_spawneroldfunctionality.GetBool())
+		{
+			if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_COMBINEFIREFIGHT)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSCombineFirefightRare);
+				pRandomName = g_charNPCSCombineFirefightRare[randomChoice];
+			}
+			else if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_XENINVASION)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSXenInvasionRare);
+				pRandomName = g_charNPCSXenInvasionRare[randomChoice];
+			}
+			else if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_ANTLIONASSAULT)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSAntlionAssaultRare);
+				pRandomName = g_charNPCSAntlionAssaultRare[randomChoice];
+			}
+			else if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_ZOMBIESURVIVAL)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSZombieSurvivalRare);
+				pRandomName = g_charNPCSZombieSurvivalRare[randomChoice];
+			}
+			else if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_FIREFIGHTRUMBLE)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSRare);
+				pRandomName = g_charNPCSRare[randomChoice];
+			}
+		}
+		else
+		{
+			int randomChoice = rand() % ARRAYSIZE(g_charNPCSRare);
+			pRandomName = g_charNPCSRare[randomChoice];
+		}
 	}
 	else
 	{
-		const char** entList = GetListForCommonNPCs();
-		int randomChoice = rand() % sizeof(entList);
-		pRandomName = entList[randomChoice];
+		if (g_fr_spawneroldfunctionality.GetBool())
+		{
+			if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_COMBINEFIREFIGHT)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSCombineFirefightCommon);
+				pRandomName = g_charNPCSCombineFirefightCommon[randomChoice];
+			}
+			else if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_XENINVASION)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSXenInvasionCommon);
+				pRandomName = g_charNPCSXenInvasionCommon[randomChoice];
+			}
+			else if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_ANTLIONASSAULT)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSAntlionAssaultCommon);
+				pRandomName = g_charNPCSAntlionAssaultCommon[randomChoice];
+			}
+			else if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_ZOMBIESURVIVAL)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSZombieSurvivalCommon);
+				pRandomName = g_charNPCSZombieSurvivalCommon[randomChoice];
+			}
+			else if (g_pGameRules->GetGamemode() == FIREFIGHT_PRIMARY_FIREFIGHTRUMBLE)
+			{
+				int randomChoice = rand() % ARRAYSIZE(g_charNPCSCommon);
+				pRandomName = g_charNPCSCommon[randomChoice];
+			}
+		}
+		else
+		{
+			int randomChoice = rand() % ARRAYSIZE(g_charNPCSCommon);
+			pRandomName = g_charNPCSCommon[randomChoice];
+		}
 	}
 
 	CAI_BaseNPC* pent = (CAI_BaseNPC*)CreateEntityByName(pRandomName);

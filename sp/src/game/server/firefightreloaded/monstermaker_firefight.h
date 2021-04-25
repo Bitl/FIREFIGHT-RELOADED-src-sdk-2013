@@ -37,8 +37,6 @@ public:
 	bool CanMakeRareNPC();
 
 	virtual void DeathNotice( CBaseEntity *pChild );// NPC maker children use this to tell the NPC maker that they have died.
-	const char** GetListForRareNPCs(void);
-	const char** GetListForCommonNPCs(void);
 	virtual void MakeNPC(bool rareNPC = false);
 
 	virtual	void ChildPreSpawn( CAI_BaseNPC *pChild ) {};

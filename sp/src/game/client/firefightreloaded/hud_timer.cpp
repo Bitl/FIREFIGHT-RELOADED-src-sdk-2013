@@ -101,7 +101,7 @@ void CHudTimer::VidInit()
 //-----------------------------------------------------------------------------
 void CHudTimer::OnThink()
 {
-	if (!g_pGameRules->IsMultiplayer() && cl_fr_usetimer.GetBool())
+	if (g_pGameRules && !g_pGameRules->IsMultiplayer() && cl_fr_usetimer.GetBool())
 	{
 		int iRemain = (int)gpGlobals->curtime;
 		int iMinutes, iSeconds;
@@ -111,7 +111,7 @@ void CHudTimer::OnThink()
 		SetSeconds(iSeconds);
 		SetAlpha(255);
 	}
-	else if (g_pGameRules->IsMultiplayer() && HL2GameRules()->GetMapRemainingTime() > 0)
+	else if (g_pGameRules && g_pGameRules->IsMultiplayer() && HL2GameRules()->GetMapRemainingTime() > 0)
 	{
 		SetAlpha(255);
 		int iRemain = (int)HL2GameRules()->GetMapRemainingTime();

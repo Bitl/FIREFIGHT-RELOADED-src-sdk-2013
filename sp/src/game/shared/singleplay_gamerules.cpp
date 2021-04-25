@@ -202,7 +202,7 @@ bool CSingleplayRules::Damage_ShouldNotBleed( int iDmgType )
 		Q_FixSlashes(mapname);
 		Q_strlower(mapname);
 
-		if (!g_fr_spawneroldfunctionality.GetBool())
+		if (g_fr_spawneroldfunctionality.GetBool())
 		{
 			if (V_stristr(mapname, "cf"))
 			{
